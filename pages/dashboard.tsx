@@ -13,3 +13,5 @@ export default function Dashboard() {
 // localStorage -> Os dados se mantem mesmo se fecharmos o navegador, como estamos usando Next.js e ele não é só o lado do cliente a interface, nós tbm usamos o SSR o lado do servidor, e no lado do servidor nós não temos acesso ao localStorage, ele só existe no lado do browser
 
 // Cookies -> Cookies tbm são formas de armazenar informações no browser, essas informações podem ser enviadas ou não, nós podemos escolher entre requisições que acontecem na nossa aplicação, e ele pode ser acessado tanto pelo browser quanto pelo lado do servidor.
+
+// Nós vamos usar uma lib para trabalhar com os cookies que se chama nookies, nós vamos usa-la pq ela tem uma integração melhor com Next.js
