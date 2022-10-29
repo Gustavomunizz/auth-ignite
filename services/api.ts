@@ -6,6 +6,8 @@ interface AxiosErrorResponse {
 }
 
 let cookies = parseCookies()
+let isRefreshing = false
+let failedRequestQueue = []
 
 export const api = axios.create({
   baseURL: 'http://localhost:3333',
@@ -24,25 +26,56 @@ api.interceptors.response.use(
         cookies = parseCookies()
 
         const { 'nextauth.refreshToken': refreshToken } = cookies
+        const originalConfig = error.config
 
-        api
-          .post('/refresh', {
-            refreshToken
-          })
-          .then(response => {
-            const { token } = response.data
+        if (!isRefreshing) {
+          isRefreshing = true // isso vai impedir que aconteca um refresh de token para cada requisição requisição chamada, e sim aconteça o refresh do Token uma unica vez.
 
-            setCookie(undefined, 'nextauth.token', token, {
-              maxAge: 60 * 60 * 24 * 30, // 30 days
-              path: '/' // Quando colocamos '/' quer dizer que qualquer endereço da nossa aplicação vai ter acesso a esse cookie.
+          api
+            .post('/refresh', {
+              refreshToken
             })
-            setCookie(undefined, 'nextauth.refreshToken', response.data.refreshToken, {
-              maxAge: 60 * 60 * 24 * 30, // 30 days
-              path: '/'
-            })
+            .then(response => {
+              const { token } = response.data
 
-            api.defaults.headers['Authorization'] = `Bearer ${token}`
+              setCookie(undefined, 'nextauth.token', token, {
+                maxAge: 60 * 60 * 24 * 30, // 30 days
+                path: '/' // Quando colocamos '/' quer dizer que qualquer endereço da nossa aplicação vai ter acesso a esse cookie.
+              })
+              setCookie(undefined, 'nextauth.refreshToken', response.data.refreshToken, {
+                maxAge: 60 * 60 * 24 * 30, // 30 days
+                path: '/'
+              })
+
+              api.defaults.headers['Authorization'] = `Bearer ${token}`
+
+              failedRequestQueue.forEach(request => request.onSuccess(token))
+              failedRequestQueue = []
+            })
+            .catch(err => {
+              failedRequestQueue.forEach(request => request.onFailure(err))
+            })
+            .finally(() => {
+              isRefreshing = false
+            })
+        }
+
+        return new Promise((resolve, reject) => {
+          failedRequestQueue.push({
+            onSuccess: (token: string) => {
+              if (!originalConfig?.headers) {
+                return
+              }
+
+              originalConfig.headers['Authorization'] = `Bearer ${token}`
+
+              resolve(api(originalConfig)) //
+            },
+            onFailure: (err: AxiosError) => {
+              reject(err)
+            }
           })
+        })
       } else {
         // deslogar usuário
       }
@@ -70,3 +103,5 @@ api.interceptors.response.use(
 
 // Então o que vamos fazer é uma fila de requisições no Axios, quando o interceptor detectar que o token está expirado ele vai automaticamente pausar todas as requisições até o token está realmente atualizado e depois ele vai pegar todas aquelas requisições que não foram feitas porque o token não estava atualizado e vai executar ela dnv com o token atualizado
 // Resumo: a fila vai armazenar todas as requisições feitas ao back enquanto o token está tendo o refresh, e quando o refresh terminar vamos refazer as requisições com as novas infos do token.
+
+// error.config -> Neste config tem todas as informações necessárias para repetirmos uma requisição ao back-end, ele basicamente é a config das requisições
