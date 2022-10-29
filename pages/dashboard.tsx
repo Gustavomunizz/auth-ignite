@@ -1,3 +1,6 @@
+import { GetServerSideProps } from 'next'
+import { redirect } from 'next/dist/server/api-utils'
+import { parseCookies } from 'nookies'
 import { useContext, useEffect } from 'react'
 import { AuthContext } from '../contexts/authContext'
 import { api } from '../services/api'
