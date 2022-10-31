@@ -16,3 +16,5 @@ export function Can({ children, permissions, roles }: CanProps) {
 
   return <>{children}</>
 }
+
+// Componente de permissão
