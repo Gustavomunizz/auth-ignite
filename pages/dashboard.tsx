@@ -1,9 +1,8 @@
-import { GetServerSideProps } from 'next'
-import { redirect } from 'next/dist/server/api-utils'
-import { parseCookies } from 'nookies'
 import { useContext, useEffect } from 'react'
 import { AuthContext } from '../contexts/authContext'
-import { api } from '../services/api'
+import { setupAPIClient } from '../services/api'
+import { api } from '../services/apiClient'
+import { withSSRAuth } from '../utils/withSSRAuth'
 
 export default function Dashboard() {
   const { user } = useContext(AuthContext)
@@ -16,6 +15,20 @@ export default function Dashboard() {
   }, [])
   return <h1>Dashboard: {user?.email}</h1>
 }
+
+export const getServerSideProps = withSSRAuth(async function name(ctx) {
+  try {
+    const apiClient = setupAPIClient(ctx)
+    const response = await apiClient.get('/me')
+    console.log(response.data)
+  } catch (error) {
+    console.log(error)
+  }
+
+  return {
+    props: {}
+  }
+})
 
 // Quando damos um F5 na página o e-mail do usuário não permanece, nós temos alguma forma de manter isso.
 
