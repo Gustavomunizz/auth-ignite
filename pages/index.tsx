@@ -32,6 +32,7 @@ export default function Home() {
         value={password}
         onChange={e => setPassword(e.target.value)}
         autoComplete="on"
+        placeholder="digite sua senha"
       />
       <button type="submit">Entrar</button>
     </form>

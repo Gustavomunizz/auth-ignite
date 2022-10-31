@@ -9,7 +9,8 @@ type SignInCredentials = {
 }
 
 type AuthContextData = {
-  signIn(credentials: SignInCredentials): Promise<void>
+  signIn: (credentials: SignInCredentials) => Promise<void>
+  signOut: () => void
   isAuthenticated: boolean
   user: User | undefined
 }
@@ -26,9 +27,13 @@ type User = {
 
 export const AuthContext = createContext({} as AuthContextData)
 
+let authChannel: BroadcastChannel
+
 export function signOut() {
   destroyCookie(undefined, 'nextauth.token')
   destroyCookie(undefined, 'nextauth.refreshToken')
+
+  authChannel.postMessage('signOut')
 
   Router.push('/')
 }
@@ -36,6 +41,20 @@ export function signOut() {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User>()
   const isAuthenticated = !!user // se estiver vazio vai retornar false, se tiver algo true
+
+  useEffect(() => {
+    authChannel = new BroadcastChannel('auth')
+
+    authChannel.onmessage = message => {
+      switch (message.data) {
+        case 'signOut':
+          Router.push('/')
+          break
+        default:
+          break
+      }
+    }
+  }, [])
 
   useEffect(() => {
     const { 'nextauth.token': token } = parseCookies()
@@ -87,7 +106,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }
 
   return (
-    <AuthContext.Provider value={{ signIn, isAuthenticated, user }}>
+    <AuthContext.Provider value={{ signIn, signOut, isAuthenticated, user }}>
       {children}
     </AuthContext.Provider>
   )
@@ -100,3 +119,5 @@ export function AuthProvider({ children }: AuthProviderProps) {
 // 4) Tbm temos um 4 parametro, nele nós passamos algumas opções(configs).
 
 // Agr toda vez que o usuário acessar a aplicação pela primeira vez nós devemos carregar o estado user com as informações, nós vamos fazer isso usando o useEffect com ele nós vamos fazer uma requisição a API e buscar os dados do usuário
+
+// BroadcastChannel -> Ele permite a comunicação entre abas, guias ou janelas, nós vamos usar ele para quando a pessoa tiver mais de duas abas da nossa aplicação aberta no momento que ele fizer logout em uma a outra tbm fará.
